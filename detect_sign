@@ -75,17 +75,14 @@ Communications Failed
 def getKey():
     if os.name == 'nt':
       return msvcrt.getch()
-    # return fileno to raw
-    # fileno() return file descripter
+
     tty.setraw(sys.stdin.fileno())
-    # select(input, output, output, delay)
     rlist, _, _ = select.select([sys.stdin], [], [], 0.1)
-    # after reading store input key value in key parameter
     if rlist:
         key = sys.stdin.read(1)
     else:
         key = ''
-    # after terminate the echo of stdin, unactivate standard mode
+
     termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
     return key
 
@@ -131,25 +128,6 @@ def checkAngularLimitVelocity(vel):
       vel = constrain(vel, -BURGER_MAX_ANG_VEL, BURGER_MAX_ANG_VEL)
 
     return vel
-"""
-class Decide():
-  def __init__(self):
-
-    self.uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)    
-
-    self.ros_package_path = os.path.dirname(os.path.realpath(__file__))
-    self.ros_package_path = self.ros_package_path.replace('turtlebot3_teleop/nodes', '')
-
-
-  def mode_controll(self, select):
-    if select == 2:
-      self.launch_detect_stop = roslaunch.scriptapi.ROSLaunch()
-      self.launch_detect_stop = roslaunch.parent.ROSLaunchParent(self.uuid, [self.ros_package_path + "turtlebot3_teleop/launch/turtlebot3_teleop_key.launch"])
-      self.launch_detect_stop.start()
- 
-  def main(self):
-    rospy.spin()
-"""
 #initialization
 class DetectSign():
     def __init__(self):
@@ -166,29 +144,28 @@ class DetectSign():
         if self.sub_image_type == "compressed":
 
             # subscribes compressed image
-
-            self.sub_image_original = rospy.Subscriber('/detect/image_input/compressed', CompressedImage, self.cbFindTrafficSign, queue_size = 1)
-
+            #self.sub_image_original = rospy.Subscriber('/detect/image_input/compressed', CompressedImage, self.cbFindTrafficSign, queue_size = 1)
+            self.sub_image_original = rospy.Subscriber('/detect/image_input', Image, self.cbFindTrafficSign, queue_size = 1)
         elif self.sub_image_type == "raw":
 
             # subscribes raw image
-
             self.sub_image_original = rospy.Subscriber('/detect/image_input', Image, self.cbFindTrafficSign, queue_size = 1)
 
         self.pub_traffic_sign = rospy.Publisher('/detect/traffic_sign', UInt8, queue_size=1)
-
+    
+    
         if self.pub_image_type == "compressed":
 
             # publishes traffic sign image in compressed type 
 
             self.pub_image_traffic_sign = rospy.Publisher('/detect/image_output/compressed', CompressedImage, queue_size = 1)
-
+        
         elif self.pub_image_type == "raw":
 
             # publishes traffic sign image in raw type
 
             self.pub_image_traffic_sign = rospy.Publisher('/detect/image_output', Image, queue_size = 1)
-
+        
 
         self.cvBridge = CvBridge() 
 
@@ -760,9 +737,9 @@ class DetectSign():
 
                 self.pub_image_traffic_sign.publish(self.cvBridge.cv2_to_imgmsg(final6, "bgr8"))
 
-    def Decider(self, opt):
-        #ob = DetectSign()
-        if opt == 2:
+    def Decider(self):
+        ob = DetectSign()
+        if ob.selection(1):
             target_linear_vel   = 0.0
             control_linear_vel  = 0.0
             target_angular_vel  = 0.0
@@ -781,75 +758,38 @@ class DetectSign():
         rospy.spin()
 
 if __name__=="__main__":
-    #if os.name != 'nt':
-    #    settings = termios.tcgetattr(sys.stdin)
+    if os.name != 'nt':
+        settings = termios.tcgetattr(sys.stdin)
 
-    rospy.init_node('detect_sign')
-    #pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
+    rospy.init_node('please')
+    pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
     
-#    node = DetectSign()
-#    node.main()
-#    turtlebot3_model = rospy.get_param("model", "burger")
-   
-    #status = 0
-    #target_linear_vel   = 0.0
-    #target_angular_vel  = 0.0
-    #control_linear_vel  = 0.0
-    #control_angular_vel = 0.0
+    status = 0
+    target_linear_vel   = 0.0
+    target_angular_vel  = 0.0
+    control_linear_vel  = 0.0
+    control_angular_vel = 0.0
     
-    node = DetectSign()
-    #node.Decider(2)
-    node.main()
-            
-"""
+    #node = DetectSign()
+
     try:
-        while(1):
-            node.Decider(node.selection(1))
-
+        print msg
         while(1):
             key = getKey()
-            #increasing speed
-            #target_linear_vel = checkLinearLimitVelocity(target_linear_vel + LIN_VEL_STEP_SIZE)
-            #status = status + 1
-            
+
             #steady speed (forward)
             target_linear_vel = 0.01
             print vels(target_linear_vel,target_angular_vel)
-            
-            if key == 'w' :
-                target_linear_vel = checkLinearLimitVelocity(target_linear_vel + LIN_VEL_STEP_SIZE)
-                status = status + 1
-                print vels(target_linear_vel,target_angular_vel)
-            elif key == 'x' :
-                target_linear_vel = checkLinearLimitVelocity(target_linear_vel - LIN_VEL_STEP_SIZE)
-                status = status + 1
-                print vels(target_linear_vel,target_angular_vel)
-            elif key == 'a' :
-                target_angular_vel = checkAngularLimitVelocity(target_angular_vel + ANG_VEL_STEP_SIZE)
-                status = status + 1
-                print vels(target_linear_vel,target_angular_vel)
-            elif key == 'd' :
-                target_angular_vel = checkAngularLimitVelocity(target_angular_vel - ANG_VEL_STEP_SIZE)
-                status = status + 1
-                print vels(target_linear_vel,target_angular_vel)
-            elif key == ' ' or key == 's' :
-                target_linear_vel   = 0.0
-                control_linear_vel  = 0.0
-                target_angular_vel  = 0.0
-                control_angular_vel = 0.0
-                print vels(target_linear_vel, target_angular_vel)
-            
-            # ctrl+C -> terminate and restart the class
-            else:
-                if (key == '\x03'):
+
+            #node.Decider(2)
+
+            if (key == '\x03'):
                     break
 
-            # key input: 20 -> reinput
             if status == 20 :
                 print msg
                 status = 0
 
-            # to utilizae linear, angular
             twist = Twist()
 
             control_linear_vel = makeSimpleProfile(control_linear_vel, target_linear_vel, (LIN_VEL_STEP_SIZE/2.0))
@@ -860,17 +800,5 @@ if __name__=="__main__":
 
             pub.publish(twist)
 
-    # error occur -> print e
     except:
         print e
-
-    # after main loop is terminated, set the all velosity to 0
-    finally:
-        twist = Twist()
-        twist.linear.x = 0.0; twist.linear.y = 0.0; twist.linear.z = 0.0
-        twist.angular.x = 0.0; twist.angular.y = 0.0; twist.angular.z = 0.0
-        pub.publish(twist)
-    
- #   if os.name != 'nt':
- #       termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
-"""
